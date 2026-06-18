@@ -1,0 +1,16 @@
+; Hello World in Cento
+(let [name "World"]
+  (println (str "Hello, " name "!")))
+
+; Fibonacci
+(fn fib [n]
+  (if (<= n 1)
+    n
+    (+ (fib (- n 1)) (fib (- n 2)))))
+
+(println (str "fib(10) = " (fib 10)))
+
+; Higher-order functions
+(let [nums [1 2 3 4 5]]
+  (let [doubled (Map (fn [x] (* x 2)) nums)]
+    (println (str "doubled: " doubled))))

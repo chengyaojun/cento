@@ -1,0 +1,11 @@
+[project]
+name = "cento"
+version = "0.1.0"
+description = "A functional language for learning and fun"
+requires-python = ">=3.10"
+
+[project.scripts]
+cento = "src.__main__:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
