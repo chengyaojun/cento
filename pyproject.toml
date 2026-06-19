@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "cento"
 version = "0.1.0"
@@ -6,6 +10,9 @@ requires-python = ">=3.10"
 
 [project.scripts]
 cento = "src.__main__:main"
+
+[tool.setuptools]
+packages = ["src", "src.std"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
