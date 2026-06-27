@@ -1,0 +1,35 @@
+; collection.ct - Cento 自举实现（5 个列表操作函数）
+; 依赖：first, rest, empty?, nil, Concat（原生注册）
+
+(fn Map [f xs]
+  (if (empty? xs)
+    []
+    (Concat [(f (first xs))] (Map f (rest xs)))))
+
+(fn Filter [pred xs]
+  (if (empty? xs)
+    []
+    (if (pred (first xs))
+      (Concat [(first xs)] (Filter pred (rest xs)))
+      (Filter pred (rest xs)))))
+
+(fn Reduce [f init xs]
+  (if (empty? xs)
+    init
+    (Reduce f (f init (first xs)) (rest xs))))
+
+(fn Each-helper [f xs]
+  (if (empty? xs)
+    nil
+    (let [_ (f (first xs))]
+      (Each-helper f (rest xs)))))
+
+(fn Each [f xs]
+  (Each-helper f xs))
+
+(fn Contains [xs val]
+  (if (empty? xs)
+    false
+    (if (= (first xs) val)
+      true
+      (Contains (rest xs) val))))
