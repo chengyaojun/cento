@@ -127,14 +127,27 @@ class Parser:
         if self._peek().type == TokenType.SYMBOL and self._peek().value != "[":
             name = self._advance().value
         self._expect(TokenType.LBRACKET)
-        params = []
+        fixed_params = []
+        rest_param = None
         while self._peek().type != TokenType.RBRACKET:
-            params.append(self._expect(TokenType.SYMBOL).value)
+            tok = self._advance()
+            if tok.type != TokenType.SYMBOL:
+                raise CentoError(f"Expected parameter name, got {tok.type.name} at line {tok.line}")
+            if tok.value == "&":
+                if rest_param is not None:
+                    raise CentoError(f"Multiple & in parameter list at line {tok.line}")
+                if self._peek().type != TokenType.SYMBOL or self._peek().value == "&":
+                    raise CentoError(f"Expected parameter name after & at line {tok.line}")
+                rest_param = self._advance().value
+            else:
+                if rest_param is not None:
+                    raise CentoError(f"Parameter after rest parameter at line {tok.line}")
+                fixed_params.append(tok.value)
         self._expect(TokenType.RBRACKET)
         body = []
         while self._peek().type != TokenType.RPAREN:
             body.append(self._parse_expr())
-        return FnExpr(name=name, params=params, body=body)
+        return FnExpr(name=name, fixed_params=fixed_params, rest_param=rest_param, body=body)
 
     def _parse_if(self):
         self._advance()  # skip 'if'

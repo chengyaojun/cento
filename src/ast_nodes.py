@@ -50,13 +50,14 @@ class CallExpr:
 @dataclass
 class LetExpr:
     bindings: list  # list of (name: str, value_expr) tuples
-    body: list      # list of exprs
+    body: list  # list of exprs
 
 
 @dataclass
 class FnExpr:
     name: str | None
-    params: list[str]
+    fixed_params: list[str]
+    rest_param: str | None
     body: list
 
 

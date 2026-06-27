@@ -34,11 +34,12 @@ class Symbol:
 
 
 class Fn:
-    __slots__ = ("name", "params", "body", "env")
+    __slots__ = ("name", "fixed_params", "rest_param", "body", "env")
 
-    def __init__(self, name, params, body, env):
+    def __init__(self, name, fixed_params, rest_param, body, env):
         self.name = name
-        self.params = params
+        self.fixed_params = fixed_params
+        self.rest_param = rest_param
         self.body = body
         self.env = env
 

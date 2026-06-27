@@ -17,9 +17,10 @@ def test_symbol_repr():
 
 def test_fn_creation():
     env = {}
-    fn = Fn(name="add", params=["a", "b"], body=[], env=env)
+    fn = Fn(name="add", fixed_params=["a", "b"], rest_param=None, body=[], env=env)
     assert fn.name == "add"
-    assert fn.params == ["a", "b"]
+    assert fn.fixed_params == ["a", "b"]
+    assert fn.rest_param is None
 
 def test_cento_list_is_list():
     lst = CentoList([1, 2, 3])

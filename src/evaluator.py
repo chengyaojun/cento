@@ -59,27 +59,11 @@ class Evaluator:
 
             for name, fn in MUTABLE_FUNCTIONS.items():
                 self.global_env.define(name, fn, exported=True)
-            # std/collection (Cento 优先，Python fallback)
-            try:
-                collection_exports = self._load_cent_module("collection")
-                for name, fn in collection_exports.items():
-                    self.global_env.define(name, fn, exported=True)
-                from src.std.collection import FUNCTIONS as COLLECTION_FUNCTIONS
+            # std/collection
+            from src.std.collection import FUNCTIONS as COLLECTION_FUNCTIONS
 
-                for name, fn in COLLECTION_FUNCTIONS.items():
-                    if name not in collection_exports:
-                        self.global_env.define(name, fn, exported=True)
-            except Exception as e:
-                import sys
-
-                print(
-                    f"[bootstrap] collection.ct 加载失败，使用 Python fallback: {e}",
-                    file=sys.stderr,
-                )
-                from src.std.collection import FUNCTIONS as COLLECTION_FUNCTIONS
-
-                for name, fn in COLLECTION_FUNCTIONS.items():
-                    self.global_env.define(name, fn, exported=True)
+            for name, fn in COLLECTION_FUNCTIONS.items():
+                self.global_env.define(name, fn, exported=True)
             # std/string
             from src.std.string import FUNCTIONS as STRING_FUNCTIONS
 
@@ -169,26 +153,15 @@ class Evaluator:
 
         for name, fn in COLLECTION_FUNCTIONS.items():
             sub_evaluator.global_env.define(name, fn, exported=True)
-        # collection.ct 自身依赖 Concat（原生 concat_fn），其余 .ct 不需要额外依赖
-        # prior_bindings 用于排除上述注册的依赖，只收集 .ct 新增的导出
+        # 记录 .ct 加载前的绑定，后续只收集新增的
         prior_bindings = set(sub_evaluator.global_env.bindings.keys())
         for expr in ast.expressions:
             sub_evaluator.evaluate(expr)
 
-        # 收集 .ct 中定义的导出。
-        # 关键：.ct 可能重新定义 prior_bindings 中的同名函数（如 collection.ct
-        # 重新定义 Map/Filter，覆盖注册的 Python 依赖），这些应被导出。
-        # 通过类型区分：Fn 是 Cento 实现，Python function 是原生依赖。
-        from src.types import Fn
-
         exports = {}
         for name, value in sub_evaluator.global_env.bindings.items():
-            if not (name and name[0].isupper()):
-                continue
-            if name in prior_bindings and not isinstance(value, Fn):
-                # 原注册的 Python 依赖，跳过
-                continue
-            exports[name] = value
+            if name and name[0].isupper() and name not in prior_bindings:
+                exports[name] = value
         return exports
 
     def evaluate(self, node, env=None):
@@ -248,7 +221,13 @@ class Evaluator:
         return result
 
     def _eval_FnExpr(self, node, env):
-        fn = Fn(name=node.name, params=node.params, body=node.body, env=env)
+        fn = Fn(
+            name=node.name,
+            fixed_params=node.fixed_params,
+            rest_param=node.rest_param,
+            body=node.body,
+            env=env,
+        )
         if node.name:
             fn_env = Environment(env)
             fn_env.define(node.name, fn)
@@ -329,12 +308,22 @@ class Evaluator:
             raise CentoError(f"{callee!r} is not callable")
 
     def _apply_fn(self, fn_obj, args):
-        if len(args) != len(fn_obj.params):
-            raise CentoError(f"Expected {len(fn_obj.params)} args, got {len(args)}")
+        fixed_count = len(fn_obj.fixed_params)
+        if fn_obj.rest_param is None:
+            if len(args) != fixed_count:
+                raise CentoError(f"Expected {fixed_count} args, got {len(args)}")
+        else:
+            if len(args) < fixed_count:
+                raise CentoError(
+                    f"Expected at least {fixed_count} args, got {len(args)}"
+                )
 
         call_env = Environment(fn_obj.env)
-        for name, val in zip(fn_obj.params, args):
+        for name, val in zip(fn_obj.fixed_params, args[:fixed_count]):
             call_env.define(name, val)
+        if fn_obj.rest_param is not None:
+            rest_args = CentoList(list(args[fixed_count:]))
+            call_env.define(fn_obj.rest_param, rest_args)
 
         # TCO trampoline
         result = None
@@ -348,13 +337,26 @@ class Evaluator:
                     callee = self._eval(expr.callee, current_env)
                     if isinstance(callee, Fn):
                         args_vals = [self._eval(a, current_env) for a in expr.args]
-                        if len(args_vals) != len(callee.params):
+                        callee_fixed = len(callee.fixed_params)
+                        if callee.rest_param is None:
+                            if len(args_vals) != callee_fixed:
+                                raise CentoError(
+                                    f"Expected {callee_fixed} args, got {len(args_vals)}"
+                                )
+                        elif len(args_vals) < callee_fixed:
                             raise CentoError(
-                                f"Expected {len(callee.params)} args, got {len(args_vals)}"
+                                f"Expected at least {callee_fixed} args, got {len(args_vals)}"
                             )
                         new_env = Environment(callee.env)
-                        for pname, val in zip(callee.params, args_vals):
+                        for pname, val in zip(
+                            callee.fixed_params, args_vals[:callee_fixed]
+                        ):
                             new_env.define(pname, val)
+                        if callee.rest_param is not None:
+                            new_env.define(
+                                callee.rest_param,
+                                CentoList(list(args_vals[callee_fixed:])),
+                            )
                         body = callee.body
                         current_env = new_env
                         break  # restart while loop

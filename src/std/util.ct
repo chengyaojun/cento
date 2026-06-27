@@ -17,3 +17,6 @@
 (fn Neg? [x] (< x 0))
 
 (fn Complement [f] (fn [x] (not (f x))))
+
+(fn Const [x]
+  (fn [& rest] x))

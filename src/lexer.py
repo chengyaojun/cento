@@ -1,5 +1,5 @@
-from enum import Enum, auto
 from dataclasses import dataclass
+from enum import Enum, auto
 
 
 class TokenType(Enum):
@@ -27,7 +27,11 @@ class Token:
     def __eq__(self, other):
         if not isinstance(other, Token):
             return NotImplemented
-        return self.type == other.type and self.value == other.value and self.line == other.line
+        return (
+            self.type == other.type
+            and self.value == other.value
+            and self.line == other.line
+        )
 
 
 class Lexer:
@@ -43,27 +47,27 @@ class Lexer:
             if self.pos >= len(self.source):
                 break
             ch = self.source[self.pos]
-            if ch == '(':
+            if ch == "(":
                 self.tokens.append(Token(TokenType.LPAREN, ch, self.line))
                 self.pos += 1
-            elif ch == ')':
+            elif ch == ")":
                 self.tokens.append(Token(TokenType.RPAREN, ch, self.line))
                 self.pos += 1
-            elif ch == '[':
+            elif ch == "[":
                 self.tokens.append(Token(TokenType.LBRACKET, ch, self.line))
                 self.pos += 1
-            elif ch == ']':
+            elif ch == "]":
                 self.tokens.append(Token(TokenType.RBRACKET, ch, self.line))
                 self.pos += 1
-            elif ch == '{':
+            elif ch == "{":
                 self.tokens.append(Token(TokenType.LBRACE, ch, self.line))
                 self.pos += 1
-            elif ch == '}':
+            elif ch == "}":
                 self.tokens.append(Token(TokenType.RBRACE, ch, self.line))
                 self.pos += 1
             elif ch == '"':
                 self._read_string()
-            elif ch == ':':
+            elif ch == ":":
                 self._read_keyword()
             elif ch.isdigit():
                 self._read_number()
@@ -77,13 +81,13 @@ class Lexer:
     def _skip_whitespace_and_comments(self):
         while self.pos < len(self.source):
             ch = self.source[self.pos]
-            if ch in ' \t\r':
+            if ch in " \t\r":
                 self.pos += 1
-            elif ch == '\n':
+            elif ch == "\n":
                 self.line += 1
                 self.pos += 1
-            elif ch == ';':
-                while self.pos < len(self.source) and self.source[self.pos] != '\n':
+            elif ch == ";":
+                while self.pos < len(self.source) and self.source[self.pos] != "\n":
                     self.pos += 1
             else:
                 break
@@ -92,35 +96,41 @@ class Lexer:
         self.pos += 1  # skip opening "
         start = self.pos
         while self.pos < len(self.source) and self.source[self.pos] != '"':
-            if self.source[self.pos] == '\n':
+            if self.source[self.pos] == "\n":
                 self.line += 1
             self.pos += 1
         if self.pos >= len(self.source):
             raise SyntaxError(f"Unterminated string at line {self.line}")
-        value = self.source[start:self.pos]
+        value = self.source[start : self.pos]
         self.tokens.append(Token(TokenType.STRING, value, self.line))
         self.pos += 1  # skip closing "
 
     def _read_keyword(self):
         self.pos += 1  # skip :
         start = self.pos
-        while self.pos < len(self.source) and self._is_symbol_char(self.source[self.pos]):
+        while self.pos < len(self.source) and self._is_symbol_char(
+            self.source[self.pos]
+        ):
             self.pos += 1
-        name = self.source[start:self.pos]
+        name = self.source[start : self.pos]
         self.tokens.append(Token(TokenType.KEYWORD, name, self.line))
 
     def _read_number(self):
         start = self.pos
-        while self.pos < len(self.source) and (self.source[self.pos].isdigit() or self.source[self.pos] == '.'):
+        while self.pos < len(self.source) and (
+            self.source[self.pos].isdigit() or self.source[self.pos] == "."
+        ):
             self.pos += 1
-        value = self.source[start:self.pos]
+        value = self.source[start : self.pos]
         self.tokens.append(Token(TokenType.NUMBER, value, self.line))
 
     def _read_symbol(self):
         start = self.pos
-        while self.pos < len(self.source) and self._is_symbol_char(self.source[self.pos]):
+        while self.pos < len(self.source) and self._is_symbol_char(
+            self.source[self.pos]
+        ):
             self.pos += 1
-        value = self.source[start:self.pos]
+        value = self.source[start : self.pos]
         if value == "true" or value == "false":
             self.tokens.append(Token(TokenType.BOOL, value, self.line))
         elif value == "nil":
@@ -130,8 +140,8 @@ class Lexer:
 
     @staticmethod
     def _is_symbol_start(ch: str) -> bool:
-        return ch.isalpha() or ch in '+-*/=<>!?_'
+        return ch.isalpha() or ch in "+-*/=<>!?_&"
 
     @staticmethod
     def _is_symbol_char(ch: str) -> bool:
-        return ch.isalnum() or ch in '+-*/=<>!?_-'
+        return ch.isalnum() or ch in "+-*/=<>!?_&"
