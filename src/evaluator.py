@@ -1,7 +1,7 @@
 from src.ast_nodes import *
-from src.types import Keyword, Symbol, Fn, CentoList, CentoMap
 from src.environment import Environment
 from src.errors import CentoError
+from src.types import CentoList, CentoMap, Fn, Keyword, Symbol
 
 
 class Evaluator:
@@ -72,6 +72,10 @@ class Evaluator:
         # std/fs
         from src.std.fs import FUNCTIONS as FS_FUNCTIONS
         for name, fn in FS_FUNCTIONS.items():
+            self.global_env.define(name, fn, exported=True)
+        # std/math
+        from src.std.math import FUNCTIONS as MATH_FUNCTIONS
+        for name, fn in MATH_FUNCTIONS.items():
             self.global_env.define(name, fn, exported=True)
 
     def evaluate(self, node, env=None):
