@@ -59,11 +59,27 @@ class Evaluator:
 
             for name, fn in MUTABLE_FUNCTIONS.items():
                 self.global_env.define(name, fn, exported=True)
-            # std/collection
-            from src.std.collection import FUNCTIONS as COLLECTION_FUNCTIONS
+            # std/collection (Cento 优先，Python fallback)
+            try:
+                collection_exports = self._load_cent_module("collection")
+                for name, fn in collection_exports.items():
+                    self.global_env.define(name, fn, exported=True)
+                from src.std.collection import FUNCTIONS as COLLECTION_FUNCTIONS
 
-            for name, fn in COLLECTION_FUNCTIONS.items():
-                self.global_env.define(name, fn, exported=True)
+                for name, fn in COLLECTION_FUNCTIONS.items():
+                    if name not in collection_exports:
+                        self.global_env.define(name, fn, exported=True)
+            except Exception as e:
+                import sys
+
+                print(
+                    f"[bootstrap] collection.ct 加载失败，使用 Python fallback: {e}",
+                    file=sys.stderr,
+                )
+                from src.std.collection import FUNCTIONS as COLLECTION_FUNCTIONS
+
+                for name, fn in COLLECTION_FUNCTIONS.items():
+                    self.global_env.define(name, fn, exported=True)
             # std/string
             from src.std.string import FUNCTIONS as STRING_FUNCTIONS
 
@@ -153,7 +169,8 @@ class Evaluator:
 
         for name, fn in COLLECTION_FUNCTIONS.items():
             sub_evaluator.global_env.define(name, fn, exported=True)
-        # 记录 .ct 加载前的绑定，后续只收集新增的
+        # collection.ct 自身依赖 Concat（原生 concat_fn），其余 .ct 不需要额外依赖
+        # prior_bindings 用于排除上述注册的依赖，只收集 .ct 新增的导出
         prior_bindings = set(sub_evaluator.global_env.bindings.keys())
         for expr in ast.expressions:
             sub_evaluator.evaluate(expr)
