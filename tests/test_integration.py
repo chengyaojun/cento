@@ -1,28 +1,33 @@
 """End-to-end integration tests for Cento."""
+
+import pytest
+
 from src.evaluator import eval_str
-from src.types import Keyword, CentoList, CentoMap
+from src.types import CentoList, CentoMap, Keyword
 
 
 def test_fibonacci():
-    code = '''
+    code = """
     (fn fib [n]
       (if (<= n 1)
         n
         (+ (fib (- n 1)) (fib (- n 2)))))
     (fib 10)
-    '''
+    """
     assert eval_str(code) == 55.0
 
+
 def test_higher_order_functions():
-    code = '''
+    code = """
     (let [double (fn [x] (* x 2))]
       (Map double [1 2 3]))
-    '''
+    """
     result = eval_str(code)
     assert list(result) == [2.0, 4.0, 6.0]
 
+
 def test_closure_counter():
-    code = '''
+    code = """
     (let [make-counter (fn []
       (let [r (Ref 0)]
         (fn []
@@ -30,68 +35,87 @@ def test_closure_counter():
           (Ref-get r))))]
       (let [c (make-counter)]
         (c) (c) (c)))
-    '''
+    """
     assert eval_str(code) == 3.0
 
+
 def test_map_operations():
-    code = '''
+    code = """
     (let [m {:name "Cento" :version 1}]
       (let [m2 (Assoc m :version 2)]
         (get m2 :version)))
-    '''
+    """
     assert eval_str(code) == 2.0
 
+
 def test_string_processing():
-    code = '''
+    code = """
     (let [words (Split "hello world foo" " ")]
       (Map Upper words))
-    '''
+    """
     result = eval_str(code)
     assert list(result) == ["HELLO", "WORLD", "FOO"]
 
+
 def test_error_handling():
-    code = '''
+    code = """
     (fn safe-div [a b]
       (try
         (/ a b)
         (catch [e] nil)))
     (safe-div 10 2)
-    '''
+    """
     assert eval_str(code) == 5.0
 
+
 def test_error_handling_catch():
-    code = '''
+    code = """
     (fn safe-div [a b]
       (try
         (/ a b)
         (catch [e] nil)))
     (safe-div 10 0)
-    '''
+    """
     assert eval_str(code) is None
 
+
 def test_nested_let():
-    code = '''
+    code = """
     (let [x 10]
       (let [y 20]
         (let [z (+ x y)]
           z)))
-    '''
+    """
     assert eval_str(code) == 30.0
 
+
 def test_immutability():
-    code = '''
+    code = """
     (let [xs [1 2 3]]
       (let [ys (Concat xs [4 5])]
         (count xs)))
-    '''
+    """
     assert eval_str(code) == 3.0
 
+
 def test_tco_factorial():
-    code = '''
+    code = """
     (fn fact [n acc]
       (if (= n 0)
         acc
         (fact (- n 1) (* n acc))))
     (fact 20 1)
-    '''
+    """
     assert eval_str(code) == 2432902008176640000.0
+
+
+def test_math_combination():
+    """Verify math functions combination: Pythagorean theorem."""
+    result = eval_str(
+        """
+        (let [a 3.0
+              b 4.0]
+          (Sqrt (+ (Pow a 2) (Pow b 2))))
+    """
+    )
+    assert result == pytest.approx(5.0)
