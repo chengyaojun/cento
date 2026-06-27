@@ -1,0 +1,19 @@
+; util.ct - Cento 自举实现（9 个纯逻辑函数）
+
+(fn Identity [x] x)
+
+(fn Inc [x] (+ x 1))
+
+(fn Dec [x] (- x 1))
+
+(fn Even? [x] (= (mod x 2) 0))
+
+(fn Odd? [x] (!= (mod x 2) 0))
+
+(fn Zero? [x] (= x 0))
+
+(fn Pos? [x] (> x 0))
+
+(fn Neg? [x] (< x 0))
+
+(fn Complement [f] (fn [x] (not (f x))))
