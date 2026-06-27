@@ -49,6 +49,19 @@ def pow_fn(base, exp):
     return math.pow(base, exp)
 
 
+# Rounding
+def floor_fn(x):
+    return float(math.floor(x))
+
+
+def ceil_fn(x):
+    return float(math.ceil(x))
+
+
+def round_fn(x):
+    return float(round(x))
+
+
 FUNCTIONS = {
     # Trigonometric
     "Sin": sin_fn,
@@ -63,4 +76,8 @@ FUNCTIONS = {
     "Log10": log10_fn,
     "Sqrt": sqrt_fn,
     "Pow": pow_fn,
+    # Rounding
+    "Floor": floor_fn,
+    "Ceil": ceil_fn,
+    "Round": round_fn,
 }

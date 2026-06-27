@@ -43,3 +43,26 @@ class TestExponentialLog:
     def test_pow(self):
         assert eval_str("(Pow 2 3)") == pytest.approx(8.0)
         assert eval_str("(Pow 9 0.5)") == pytest.approx(3.0)
+
+
+class TestRounding:
+    def test_floor(self):
+        assert eval_str("(Floor 3.7)") == 3.0
+        assert eval_str("(Floor (- 1.5))") == -2.0  # -1.5
+
+    def test_ceil(self):
+        assert eval_str("(Ceil 3.2)") == 4.0
+        assert eval_str("(Ceil (- 1.5))") == -1.0  # -1.5
+
+    def test_round(self):
+        assert eval_str("(Round 3.4)") == 3.0
+        assert eval_str("(Round 3.5)") == 4.0
+        assert eval_str("(Round 2.5)") == 2.0  # Python banker's rounding
+
+    def test_floor_returns_float(self):
+        result = eval_str("(Floor 3.7)")
+        assert isinstance(result, float)
+
+    def test_ceil_returns_float(self):
+        result = eval_str("(Ceil 3.2)")
+        assert isinstance(result, float)
