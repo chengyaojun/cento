@@ -1,0 +1,65 @@
+; seq.ct - Cento 自举实现（9 个序列操作函数）
+; 依赖内置：first, rest, empty?, Concat, Contains, error, list?
+
+(fn Take [n xs]
+  (if (or (= n 0) (empty? xs))
+    []
+    (Concat [(first xs)] (Take (- n 1) (rest xs)))))
+
+(fn Drop [n xs]
+  (if (or (= n 0) (empty? xs))
+    xs
+    (Drop (- n 1) (rest xs))))
+
+(fn Nth [xs i]
+  (if (empty? xs)
+    (error "Nth index out of range")
+    (if (= i 0)
+      (first xs)
+      (Nth (rest xs) (- i 1)))))
+
+(fn Last [xs]
+  (if (empty? xs)
+    (error "Last of empty list")
+    (if (empty? (rest xs))
+      (first xs)
+      (Last (rest xs)))))
+
+(fn Range-helper [current end step]
+  (if (>= current end)
+    []
+    (Concat [current] (Range-helper (+ current step) end step))))
+
+(fn Range [start end step]
+  (Range-helper start end step))
+
+(fn Distinct [xs]
+  (if (empty? xs)
+    []
+    (let [head (first xs)
+          tail (rest xs)]
+      (if (Contains tail head)
+        (Distinct tail)
+        (Concat [head] (Distinct tail))))))
+
+(fn Flatten [xs]
+  (if (empty? xs)
+    []
+    (let [head (first xs)
+          tail (rest xs)]
+      (if (list? head)
+        (Concat (Flatten head) (Flatten tail))
+        (Concat [head] (Flatten tail))))))
+
+(fn Zip [xs ys]
+  (if (or (empty? xs) (empty? ys))
+    []
+    (Concat [(Concat [(first xs)] [(first ys)])] (Zip (rest xs) (rest ys)))))
+
+(fn Reverse-helper [xs acc]
+  (if (empty? xs)
+    acc
+    (Reverse-helper (rest xs) (Concat [(first xs)] acc))))
+
+(fn Reverse [xs]
+  (Reverse-helper xs []))
