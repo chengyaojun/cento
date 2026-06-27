@@ -61,3 +61,21 @@ class TestMixedImplementation:
         assert list(eval_str("(Sort [3 1 2])")) == [1.0, 2.0, 3.0]
         # 组合：先排序再取前 2 个
         assert list(eval_str("(Take 2 (Sort [3 1 2]))")) == [1.0, 2.0]
+
+
+class TestCollectionBootstrap:
+    def test_collection_ct_functions_loaded(self):
+        """验证 collection.ct 中的函数已注册到 global_env"""
+        e = Evaluator()
+        # Map 来自 collection.ct
+        assert e.global_env.lookup("Map") is not None
+        assert list(eval_str("(Map (fn [x] (+ x 1)) [1 2 3])")) == [2.0, 3.0, 4.0]
+
+    def test_mixed_implementation(self):
+        """collection 同时有 Cento（Map）和 Python（Concat）函数，验证协同工作"""
+        # Map 来自 collection.ct
+        assert list(eval_str("(Map (fn [x] (* x 2)) [1 2 3])")) == [2.0, 4.0, 6.0]
+        # Concat 来自 collection.py（Python 原生，因可变参数未自举）
+        assert list(eval_str("(Concat [1 2] [3 4])")) == [1.0, 2.0, 3.0, 4.0]
+        # 组合：Map + Concat
+        assert list(eval_str("(Concat (Map (fn [x] (+ x 1)) [1 2]) [10])")) == [2.0, 3.0, 10.0]
