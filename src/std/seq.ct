@@ -25,22 +25,14 @@
       (first xs)
       (Last (rest xs)))))
 
-(fn Range-helper [current end step]
-  (if (>= current end)
-    []
-    (Concat [current] (Range-helper (+ current step) end step))))
-
-(fn Range [start end step]
-  (Range-helper start end step))
+; 注：Range 因需支持 2/3 参数默认值，Cento 不支持默认参数，保留 Python fallback
 
 (fn Distinct [xs]
   (if (empty? xs)
     []
     (let [head (first xs)
           tail (rest xs)]
-      (if (Contains tail head)
-        (Distinct tail)
-        (Concat [head] (Distinct tail))))))
+      (Concat [head] (Distinct (Filter (fn [x] (!= x head)) tail))))))
 
 (fn Flatten [xs]
   (if (empty? xs)

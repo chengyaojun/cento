@@ -5,12 +5,12 @@ from src.types import CentoList, CentoMap, Fn, Keyword, Symbol
 
 
 class Evaluator:
-    def __init__(self):
+    def __init__(self, skip_std=False):
         self.global_env = Environment()
         self.module_loader = None
-        self._register_builtins()
+        self._register_builtins(skip_std=skip_std)
 
-    def _register_builtins(self):
+    def _register_builtins(self, skip_std=False):
         # Arithmetic
         self.global_env.define("+", lambda *args: sum(args))
         self.global_env.define("-", lambda a, b=None: -a if b is None else a - b)
@@ -53,46 +53,116 @@ class Evaluator:
         self.global_env.define("eq?", lambda a, b: a == b)
         # Error
         self.global_env.define("error", _error_fn)
-        # std/mutable
-        from src.std.mutable import FUNCTIONS as MUTABLE_FUNCTIONS
+        if not skip_std:
+            # std/mutable
+            from src.std.mutable import FUNCTIONS as MUTABLE_FUNCTIONS
 
-        for name, fn in MUTABLE_FUNCTIONS.items():
-            self.global_env.define(name, fn, exported=True)
-        # std/collection
+            for name, fn in MUTABLE_FUNCTIONS.items():
+                self.global_env.define(name, fn, exported=True)
+            # std/collection
+            from src.std.collection import FUNCTIONS as COLLECTION_FUNCTIONS
+
+            for name, fn in COLLECTION_FUNCTIONS.items():
+                self.global_env.define(name, fn, exported=True)
+            # std/string
+            from src.std.string import FUNCTIONS as STRING_FUNCTIONS
+
+            for name, fn in STRING_FUNCTIONS.items():
+                self.global_env.define(name, fn, exported=True)
+            # std/io
+            from src.std.io import FUNCTIONS as IO_FUNCTIONS
+
+            for name, fn in IO_FUNCTIONS.items():
+                self.global_env.define(name, fn, exported=True)
+            # std/fs
+            from src.std.fs import FUNCTIONS as FS_FUNCTIONS
+
+            for name, fn in FS_FUNCTIONS.items():
+                self.global_env.define(name, fn, exported=True)
+            # std/math
+            from src.std.math import FUNCTIONS as MATH_FUNCTIONS
+
+            for name, fn in MATH_FUNCTIONS.items():
+                self.global_env.define(name, fn, exported=True)
+            # std/seq (Cento 优先，Python fallback)
+            try:
+                seq_exports = self._load_cent_module("seq")
+                for name, fn in seq_exports.items():
+                    self.global_env.define(name, fn, exported=True)
+                from src.std.seq import FUNCTIONS as SEQ_FUNCTIONS
+
+                for name, fn in SEQ_FUNCTIONS.items():
+                    if name not in seq_exports:
+                        self.global_env.define(name, fn, exported=True)
+            except Exception as e:
+                import sys
+
+                print(
+                    f"[bootstrap] seq.ct 加载失败，使用 Python fallback: {e}",
+                    file=sys.stderr,
+                )
+                from src.std.seq import FUNCTIONS as SEQ_FUNCTIONS
+
+                for name, fn in SEQ_FUNCTIONS.items():
+                    self.global_env.define(name, fn, exported=True)
+            # std/util (Cento 优先，Python fallback)
+            try:
+                util_exports = self._load_cent_module("util")
+                for name, fn in util_exports.items():
+                    self.global_env.define(name, fn, exported=True)
+                from src.std.util import FUNCTIONS as UTIL_FUNCTIONS
+
+                for name, fn in UTIL_FUNCTIONS.items():
+                    if name not in util_exports:
+                        self.global_env.define(name, fn, exported=True)
+            except Exception as e:
+                import sys
+
+                print(
+                    f"[bootstrap] util.ct 加载失败，使用 Python fallback: {e}",
+                    file=sys.stderr,
+                )
+                from src.std.util import FUNCTIONS as UTIL_FUNCTIONS
+
+                for name, fn in UTIL_FUNCTIONS.items():
+                    self.global_env.define(name, fn, exported=True)
+
+    def _load_cent_module(self, module_name):
+        """加载 Cento 源文件实现的标准库模块。
+        返回 {name: callable} 字典。失败时抛异常由调用方 fallback。
+        """
+        import os
+
+        from src.lexer import Lexer
+        from src.parser import Parser
+
+        ct_path = os.path.join(os.path.dirname(__file__), "std", f"{module_name}.ct")
+        if not os.path.exists(ct_path):
+            raise FileNotFoundError(f"No .ct file: {ct_path}")
+
+        with open(ct_path, "r", encoding="utf-8") as f:
+            source = f.read()
+
+        tokens = Lexer(source).tokenize()
+        ast = Parser(tokens).parse()
+
+        # 使用独立 evaluator 避免污染当前 global_env
+        # skip_std=True 避免递归加载 std 模块，手动注册 collection 依赖
+        sub_evaluator = Evaluator(skip_std=True)
         from src.std.collection import FUNCTIONS as COLLECTION_FUNCTIONS
 
         for name, fn in COLLECTION_FUNCTIONS.items():
-            self.global_env.define(name, fn, exported=True)
-        # std/string
-        from src.std.string import FUNCTIONS as STRING_FUNCTIONS
+            sub_evaluator.global_env.define(name, fn, exported=True)
+        # 记录 .ct 加载前的绑定，后续只收集新增的
+        prior_bindings = set(sub_evaluator.global_env.bindings.keys())
+        for expr in ast.expressions:
+            sub_evaluator.evaluate(expr)
 
-        for name, fn in STRING_FUNCTIONS.items():
-            self.global_env.define(name, fn, exported=True)
-        # std/io
-        from src.std.io import FUNCTIONS as IO_FUNCTIONS
-
-        for name, fn in IO_FUNCTIONS.items():
-            self.global_env.define(name, fn, exported=True)
-        # std/fs
-        from src.std.fs import FUNCTIONS as FS_FUNCTIONS
-
-        for name, fn in FS_FUNCTIONS.items():
-            self.global_env.define(name, fn, exported=True)
-        # std/math
-        from src.std.math import FUNCTIONS as MATH_FUNCTIONS
-
-        for name, fn in MATH_FUNCTIONS.items():
-            self.global_env.define(name, fn, exported=True)
-        # std/seq
-        from src.std.seq import FUNCTIONS as SEQ_FUNCTIONS
-
-        for name, fn in SEQ_FUNCTIONS.items():
-            self.global_env.define(name, fn, exported=True)
-        # std/util
-        from src.std.util import FUNCTIONS as UTIL_FUNCTIONS
-
-        for name, fn in UTIL_FUNCTIONS.items():
-            self.global_env.define(name, fn, exported=True)
+        exports = {}
+        for name, value in sub_evaluator.global_env.bindings.items():
+            if name and name[0].isupper() and name not in prior_bindings:
+                exports[name] = value
+        return exports
 
     def evaluate(self, node, env=None):
         if env is None:
