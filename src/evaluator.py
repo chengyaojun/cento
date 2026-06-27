@@ -51,6 +51,9 @@ class Evaluator:
         self.global_env.define("rest", _rest_fn)
         self.global_env.define("get", _get_fn)
         self.global_env.define("eq?", lambda a, b: a == b)
+        # Apply (dynamic arity call)
+        self.global_env.define("apply",
+            lambda fn, args: self._apply(fn, list(args)))
         # Error
         self.global_env.define("error", _error_fn)
         # std/mutable

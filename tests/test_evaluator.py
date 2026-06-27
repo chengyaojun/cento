@@ -156,3 +156,12 @@ def test_mutable_map():
     from src.types import Keyword
     result = eval_str('(let [m (Mutable-map)] (Mutable-map-set! m :name "Cento") (Mutable-map-get m :name))')
     assert result == "Cento"
+
+def test_apply_with_builtin():
+    assert eval_str('(apply + [1 2 3])') == 6.0
+
+def test_apply_with_fn():
+    assert eval_str('(apply (fn [x y] (* x y)) [3 4])') == 12.0
+
+def test_apply_with_no_args():
+    assert eval_str('(apply (fn [] 42) [])') == 42.0
