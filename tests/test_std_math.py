@@ -66,3 +66,35 @@ class TestRounding:
     def test_ceil_returns_float(self):
         result = eval_str("(Ceil 3.2)")
         assert isinstance(result, float)
+
+
+class TestConstants:
+    def test_pi(self):
+        assert eval_str("Pi") == pytest.approx(math.pi)
+
+    def test_e(self):
+        assert eval_str("E") == pytest.approx(math.e)
+
+
+class TestDomainErrors:
+    def test_sqrt_negative(self):
+        with pytest.raises(Exception):
+            eval_str("(Sqrt (- 1))")
+
+    def test_log_zero(self):
+        with pytest.raises(Exception):
+            eval_str("(Log 0)")
+
+    def test_asin_out_of_range(self):
+        with pytest.raises(Exception):
+            eval_str("(Asin 2)")
+
+    def test_error_caught_by_try(self):
+        result = eval_str(
+            """
+            (try
+              (Sqrt (- 1))
+              (catch [msg] (str "caught: " msg)))
+        """
+        )
+        assert "caught" in result

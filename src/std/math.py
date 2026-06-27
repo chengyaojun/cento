@@ -62,6 +62,10 @@ def round_fn(x):
     return float(round(x))
 
 
+# Constants
+Pi = math.pi
+E = math.e
+
 FUNCTIONS = {
     # Trigonometric
     "Sin": sin_fn,
@@ -80,4 +84,7 @@ FUNCTIONS = {
     "Floor": floor_fn,
     "Ceil": ceil_fn,
     "Round": round_fn,
+    # Constants (values, not functions)
+    "Pi": Pi,
+    "E": E,
 }
