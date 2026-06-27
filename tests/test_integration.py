@@ -119,3 +119,27 @@ def test_math_combination():
     """
     )
     assert result == pytest.approx(5.0)
+
+
+def test_primitives_tokenizer():
+    """验证原语协作：用 char-at/digit?/count/Concat/error 写最小 tokenizer。"""
+    code = '''
+    (let [s "42"
+          n (count s)]
+      (let [tokenize-loop
+            (fn [i acc]
+              (if (>= i n)
+                acc
+                (let [ch (char-at s i)]
+                  (if (digit? ch)
+                    (tokenize-loop (+ i 1)
+                      (Concat acc [{:type :digit :value ch}]))
+                    (error "unexpected char")))))]
+        (tokenize-loop 0 [])))
+    '''
+    result = eval_str(code)
+    assert len(result) == 2
+    assert result[0][Keyword("type")] == Keyword("digit")
+    assert result[0][Keyword("value")] == "4"
+    assert result[1][Keyword("type")] == Keyword("digit")
+    assert result[1][Keyword("value")] == "2"

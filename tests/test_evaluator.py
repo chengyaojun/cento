@@ -240,3 +240,15 @@ class TestVariadicParams:
         """
         )
         assert result == 100.0
+
+
+def test_apply_with_builtin():
+    assert eval_str("(apply + [1 2 3])") == 6.0
+
+
+def test_apply_with_fn():
+    assert eval_str("(apply (fn [x y] (* x y)) [3 4])") == 12.0
+
+
+def test_apply_with_no_args():
+    assert eval_str("(apply (fn [] 42) [])") == 42.0

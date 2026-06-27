@@ -60,10 +60,10 @@ class TestRepeat:
 
 class TestCharAt:
     def test_char_at_first(self):
-        assert eval_str('(Char-at "hello" 0)') == "h"
+        assert eval_str('(char-at "hello" 0)') == "h"
 
     def test_char_at_last(self):
-        assert eval_str('(Char-at "hello" 4)') == "o"
+        assert eval_str('(char-at "hello" 4)') == "o"
 
 
 class TestSplitLines:
