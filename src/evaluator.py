@@ -55,31 +55,43 @@ class Evaluator:
         self.global_env.define("error", _error_fn)
         # std/mutable
         from src.std.mutable import FUNCTIONS as MUTABLE_FUNCTIONS
+
         for name, fn in MUTABLE_FUNCTIONS.items():
             self.global_env.define(name, fn, exported=True)
         # std/collection
         from src.std.collection import FUNCTIONS as COLLECTION_FUNCTIONS
+
         for name, fn in COLLECTION_FUNCTIONS.items():
             self.global_env.define(name, fn, exported=True)
         # std/string
         from src.std.string import FUNCTIONS as STRING_FUNCTIONS
+
         for name, fn in STRING_FUNCTIONS.items():
             self.global_env.define(name, fn, exported=True)
         # std/io
         from src.std.io import FUNCTIONS as IO_FUNCTIONS
+
         for name, fn in IO_FUNCTIONS.items():
             self.global_env.define(name, fn, exported=True)
         # std/fs
         from src.std.fs import FUNCTIONS as FS_FUNCTIONS
+
         for name, fn in FS_FUNCTIONS.items():
             self.global_env.define(name, fn, exported=True)
         # std/math
         from src.std.math import FUNCTIONS as MATH_FUNCTIONS
+
         for name, fn in MATH_FUNCTIONS.items():
             self.global_env.define(name, fn, exported=True)
         # std/seq
         from src.std.seq import FUNCTIONS as SEQ_FUNCTIONS
+
         for name, fn in SEQ_FUNCTIONS.items():
+            self.global_env.define(name, fn, exported=True)
+        # std/util
+        from src.std.util import FUNCTIONS as UTIL_FUNCTIONS
+
+        for name, fn in UTIL_FUNCTIONS.items():
             self.global_env.define(name, fn, exported=True)
 
     def evaluate(self, node, env=None):
@@ -156,7 +168,7 @@ class Evaluator:
         return None
 
     def _eval_ImportExpr(self, node, env):
-        if not hasattr(self, 'module_loader') or self.module_loader is None:
+        if not hasattr(self, "module_loader") or self.module_loader is None:
             raise CentoError("Module system not available")
 
         module_path = node.path
@@ -234,13 +246,15 @@ class Evaluator:
 
         while True:
             for i, expr in enumerate(body):
-                is_tail = (i == len(body) - 1)
+                is_tail = i == len(body) - 1
                 if is_tail and isinstance(expr, CallExpr):
                     callee = self._eval(expr.callee, current_env)
                     if isinstance(callee, Fn):
                         args_vals = [self._eval(a, current_env) for a in expr.args]
                         if len(args_vals) != len(callee.params):
-                            raise CentoError(f"Expected {len(callee.params)} args, got {len(args_vals)}")
+                            raise CentoError(
+                                f"Expected {len(callee.params)} args, got {len(args_vals)}"
+                            )
                         new_env = Environment(callee.env)
                         for pname, val in zip(callee.params, args_vals):
                             new_env.define(pname, val)
@@ -248,7 +262,9 @@ class Evaluator:
                         current_env = new_env
                         break  # restart while loop
                     else:
-                        result = self._apply(callee, [self._eval(a, current_env) for a in expr.args])
+                        result = self._apply(
+                            callee, [self._eval(a, current_env) for a in expr.args]
+                        )
                         return result
                 elif is_tail and isinstance(expr, IfExpr):
                     cond = self._eval(expr.condition, current_env)
@@ -382,6 +398,7 @@ def _error_fn(msg, data=None):
 def eval_str(code: str):
     from src.lexer import Lexer
     from src.parser import Parser
+
     tokens = Lexer(code).tokenize()
     ast = Parser(tokens).parse()
     ev = Evaluator()
