@@ -77,6 +77,10 @@ class Evaluator:
         from src.std.math import FUNCTIONS as MATH_FUNCTIONS
         for name, fn in MATH_FUNCTIONS.items():
             self.global_env.define(name, fn, exported=True)
+        # std/seq
+        from src.std.seq import FUNCTIONS as SEQ_FUNCTIONS
+        for name, fn in SEQ_FUNCTIONS.items():
+            self.global_env.define(name, fn, exported=True)
 
     def evaluate(self, node, env=None):
         if env is None:
