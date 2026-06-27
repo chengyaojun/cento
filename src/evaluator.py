@@ -175,10 +175,20 @@ class Evaluator:
         for expr in ast.expressions:
             sub_evaluator.evaluate(expr)
 
+        # 收集 .ct 中定义的导出。
+        # 关键：.ct 可能重新定义 prior_bindings 中的同名函数（如 collection.ct
+        # 重新定义 Map/Filter，覆盖注册的 Python 依赖），这些应被导出。
+        # 通过类型区分：Fn 是 Cento 实现，Python function 是原生依赖。
+        from src.types import Fn
+
         exports = {}
         for name, value in sub_evaluator.global_env.bindings.items():
-            if name and name[0].isupper() and name not in prior_bindings:
-                exports[name] = value
+            if not (name and name[0].isupper()):
+                continue
+            if name in prior_bindings and not isinstance(value, Fn):
+                # 原注册的 Python 依赖，跳过
+                continue
+            exports[name] = value
         return exports
 
     def evaluate(self, node, env=None):
