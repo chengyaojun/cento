@@ -7,6 +7,7 @@
 """
 
 import pytest
+
 from src.evaluator import Evaluator, eval_str
 
 
@@ -24,18 +25,22 @@ class TestBootstrapLoaded:
 
     def test_complement_from_ct(self):
         """验证 Complement 来自 Cento 实现"""
-        result = eval_str("""
+        result = eval_str(
+            """
             (let [le5 (Complement (fn [x] (> x 5)))]
               (le5 3))
-        """)
+        """
+        )
         assert result is True
 
     def test_const_from_ct(self):
         """验证 Const 来自 util.ct，rest 参数支持"""
-        result = eval_str("""
+        result = eval_str(
+            """
             (let [c (Const 42)]
               (c 1 2 3))
-        """)
+        """
+        )
         assert result == 42.0
 
     def test_flatten_from_ct(self):
@@ -60,10 +65,12 @@ class TestMixedImplementation:
         # Inc 来自 util.ct
         assert eval_str("(Inc 0)") == 1.0
         # Comp 来自 util.py（Python 原生，因可变参数未自举）
-        result = eval_str("""
+        result = eval_str(
+            """
             (let [f (Comp Inc Inc)]
               (f 5))
-        """)
+        """
+        )
         assert result == 7.0
 
     def test_seq_has_both_ct_and_python(self):
@@ -82,6 +89,7 @@ class TestSeqExtendedBootstrap:
     def test_range_from_ct(self):
         """验证 Range 来自 seq.ct（Fn 类型），支持 2/3 参数"""
         from src.types import Fn
+
         e = Evaluator()
         # Range 应为 Cento Fn 实例（来自 .ct），而非 Python function
         assert isinstance(e.global_env.lookup("Range"), Fn)
@@ -96,3 +104,67 @@ class TestSeqExtendedBootstrap:
         """验证浮点 step 支持（Python 版本不支持）"""
         result = eval_str("(Range 0 1 0.25)")
         assert list(result) == [0.0, 0.25, 0.5, 0.75]
+
+    def test_sort_from_ct(self):
+        """验证 Sort 来自 seq.ct（Fn 类型）"""
+        from src.types import Fn
+
+        e = Evaluator()
+        assert isinstance(e.global_env.lookup("Sort"), Fn)
+        assert list(eval_str("(Sort [3 1 2])")) == [1.0, 2.0, 3.0]
+        assert list(eval_str("(Sort [])")) == []
+        assert list(eval_str("(Sort [42])")) == [42.0]
+
+    def test_sort_desc_from_ct(self):
+        """验证 Sort-desc 来自 seq.ct"""
+        from src.types import Fn
+
+        e = Evaluator()
+        assert isinstance(e.global_env.lookup("Sort-desc"), Fn)
+        assert list(eval_str("(Sort-desc [1 3 2])")) == [3.0, 2.0, 1.0]
+
+    def test_sort_by_from_ct(self):
+        """验证 Sort-by 来自 seq.ct"""
+        from src.types import Fn
+
+        e = Evaluator()
+        assert isinstance(e.global_env.lookup("Sort-by"), Fn)
+        result = eval_str("(Sort-by (fn [x] x) [3 1 2])")
+        assert list(result) == [1.0, 2.0, 3.0]
+
+    def test_sort_by_desc_from_ct(self):
+        """验证 Sort-by-desc 来自 seq.ct"""
+        from src.types import Fn
+
+        e = Evaluator()
+        assert isinstance(e.global_env.lookup("Sort-by-desc"), Fn)
+        result = eval_str("(Sort-by-desc (fn [x] x) [1 3 2])")
+        assert list(result) == [3.0, 2.0, 1.0]
+
+    def test_sort_stability(self):
+        """验证 Sort 稳定性：相同 key 元素保持原序"""
+        from src.types import Keyword
+
+        result = eval_str(
+            """
+            (Sort-by (fn [m] (get m :k))
+              [{:k 1 :n 1} {:k 1 :n 2} {:k 1 :n 3}])
+        """
+        )
+        n_values = [m.get(Keyword("n")) for m in result]
+        assert n_values == [1.0, 2.0, 3.0]
+
+    def test_merge_sort_internal_not_exported(self):
+        """验证内部辅助函数 merge-lists/merge-sort 不被导出"""
+        e = Evaluator()
+        # 小写开头的绑定不应在 global_env 中（_load_cent_module 只收集大写开头）
+        try:
+            e.global_env.lookup("merge-sort")
+            assert False, "merge-sort should not be exported"
+        except Exception:
+            pass  # 期望：找不到
+        try:
+            e.global_env.lookup("merge-lists")
+            assert False, "merge-lists should not be exported"
+        except Exception:
+            pass

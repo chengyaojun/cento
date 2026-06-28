@@ -65,3 +65,31 @@
 (fn Range [start end & rest]
   (let [step (if (empty? rest) 1 (first rest))]
     (Range-helper start end step [])))
+
+; 内部：合并两个已排序的列表（累加器式，TCO 友好）
+; cmp 为比较谓词，cmp(a, b) 为真时取 a（保证稳定性）
+(fn merge-lists [a b cmp acc]
+  (if (empty? a)
+    (Concat acc b)
+    (if (empty? b)
+      (Concat acc a)
+      (if (cmp (first a) (first b))
+        (merge-lists (rest a) b cmp (Concat acc [(first a)]))
+        (merge-lists a (rest b) cmp (Concat acc [(first b)]))))))
+
+; 内部：归并排序主递归
+(fn merge-sort [xs cmp]
+  (if (<= (count xs) 1)
+    xs
+    (let [mid (Floor (/ (count xs) 2))]
+      (merge-lists
+        (merge-sort (Take mid xs) cmp)
+        (merge-sort (Drop mid xs) cmp)
+        cmp
+        []))))
+
+; 公开 Sort 系列 API
+(fn Sort [xs] (merge-sort xs <=))
+(fn Sort-desc [xs] (merge-sort xs >=))
+(fn Sort-by [f xs] (merge-sort xs (fn [a b] (<= (f a) (f b)))))
+(fn Sort-by-desc [f xs] (merge-sort xs (fn [a b] (>= (f a) (f b)))))
