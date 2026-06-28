@@ -74,3 +74,25 @@ class TestMixedImplementation:
         assert list(eval_str("(Sort [3 1 2])")) == [1.0, 2.0, 3.0]
         # 组合：先排序再取前 2 个
         assert list(eval_str("(Take 2 (Sort [3 1 2]))")) == [1.0, 2.0]
+
+
+class TestSeqExtendedBootstrap:
+    """seq.ct 扩展自举测试（Range + Sort 系列）"""
+
+    def test_range_from_ct(self):
+        """验证 Range 来自 seq.ct（Fn 类型），支持 2/3 参数"""
+        from src.types import Fn
+        e = Evaluator()
+        # Range 应为 Cento Fn 实例（来自 .ct），而非 Python function
+        assert isinstance(e.global_env.lookup("Range"), Fn)
+        # 2 参数
+        assert list(eval_str("(Range 0 3)")) == [0.0, 1.0, 2.0]
+        # 3 参数
+        assert list(eval_str("(Range 0 6 2)")) == [0.0, 2.0, 4.0]
+        # 空区间
+        assert list(eval_str("(Range 5 3)")) == []
+
+    def test_range_float_step(self):
+        """验证浮点 step 支持（Python 版本不支持）"""
+        result = eval_str("(Range 0 1 0.25)")
+        assert list(result) == [0.0, 0.25, 0.5, 0.75]

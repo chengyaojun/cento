@@ -55,3 +55,13 @@
 
 (fn Reverse [xs]
   (Reverse-helper xs []))
+
+; Range - 支持 2/3 参数，浮点 step
+(fn Range-helper [current end step acc]
+  (if (>= current end)
+    acc
+    (Range-helper (+ current step) end step (Concat acc [current]))))
+
+(fn Range [start end & rest]
+  (let [step (if (empty? rest) 1 (first rest))]
+    (Range-helper start end step [])))
