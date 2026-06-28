@@ -82,11 +82,39 @@ class Evaluator:
         self.global_env.define("parse-number", _parse_number)
         self.global_env.define("Parse-number", _parse_number)
         if not skip_std:
-            # std/mutable
-            from src.std.mutable import FUNCTIONS as MUTABLE_FUNCTIONS
+            # std/mutable（宿主：需可变数据结构类型）
+            from src.types import CentoArray, MutableMap, Ref
 
-            for name, fn in MUTABLE_FUNCTIONS.items():
-                self.global_env.define(name, fn, exported=True)
+            self.global_env.define("Ref", lambda v: Ref(v), exported=True)
+            self.global_env.define("Ref-get", lambda r: r.value, exported=True)
+
+            def _ref_set(r, value):
+                r.value = value
+                return value
+
+            self.global_env.define("Ref-set!", _ref_set, exported=True)
+            self.global_env.define(
+                "Array", lambda size: CentoArray(int(size)), exported=True
+            )
+            self.global_env.define(
+                "Array-get", lambda arr, i: arr.data[int(i)], exported=True
+            )
+
+            def _array_set(arr, i, value):
+                arr.data[int(i)] = value
+                return value
+
+            self.global_env.define("Array-set!", _array_set, exported=True)
+            self.global_env.define("Mutable-map", lambda: MutableMap(), exported=True)
+            self.global_env.define(
+                "Mutable-map-get", lambda m, k: m.data.get(k), exported=True
+            )
+
+            def _mutable_map_set(m, k, value):
+                m.data[k] = value
+                return value
+
+            self.global_env.define("Mutable-map-set!", _mutable_map_set, exported=True)
 
             # std/collection 宿主函数（无法自举：需 CentoMap 构造）
             def _concat(*lists):
@@ -128,16 +156,52 @@ class Evaluator:
             string_exports = self._load_cent_module("string")
             for name, fn in string_exports.items():
                 self.global_env.define(name, fn, exported=True)
-            # std/io
-            from src.std.io import FUNCTIONS as IO_FUNCTIONS
+            # std/io（宿主：需 OS I/O）
+            import sys as _sys
 
-            for name, fn in IO_FUNCTIONS.items():
-                self.global_env.define(name, fn, exported=True)
-            # std/fs
-            from src.std.fs import FUNCTIONS as FS_FUNCTIONS
+            def _read_line():
+                return _sys.stdin.readline().rstrip("\n")
 
-            for name, fn in FS_FUNCTIONS.items():
-                self.global_env.define(name, fn, exported=True)
+            def _read_file(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    return f.read()
+
+            def _write_file(path, content):
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(content)
+                return None
+
+            self.global_env.define("Read-line", _read_line, exported=True)
+            self.global_env.define("Read-file", _read_file, exported=True)
+            self.global_env.define("Write-file", _write_file, exported=True)
+            # std/fs（宿主：需 OS 调用）
+            import os as _os
+
+            def _list_dir(p):
+                return CentoList(_os.listdir(p))
+
+            def _mkdir(p):
+                _os.makedirs(p, exist_ok=True)
+                return None
+
+            def _rmdir(p):
+                import shutil as _shutil
+
+                if _os.path.isdir(p):
+                    _shutil.rmtree(p)
+                else:
+                    _os.remove(p)
+                return None
+
+            self.global_env.define(
+                "Exists?", lambda p: _os.path.exists(p), exported=True
+            )
+            self.global_env.define(
+                "Is-dir?", lambda p: _os.path.isdir(p), exported=True
+            )
+            self.global_env.define("List-dir", _list_dir, exported=True)
+            self.global_env.define("Mkdir", _mkdir, exported=True)
+            self.global_env.define("Rmdir", _rmdir, exported=True)
             # std/math（宿主：需 Python math 库）
             import math as _math
 
