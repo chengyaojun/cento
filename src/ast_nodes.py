@@ -69,6 +69,11 @@ class IfExpr:
 
 
 @dataclass
+class CondExpr:
+    clauses: list  # list of (test_expr, result_expr) tuples
+
+
+@dataclass
 class ImportExpr:
     path: str
     symbols: list  # list of (name, alias) tuples, empty means import all

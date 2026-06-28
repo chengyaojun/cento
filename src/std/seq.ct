@@ -69,13 +69,11 @@
 ; 内部：合并两个已排序的列表（累加器式，TCO 友好）
 ; cmp 为比较谓词，cmp(a, b) 为真时取 a（保证稳定性）
 (fn merge-lists [a b cmp acc]
-  (if (empty? a)
-    (Concat acc b)
-    (if (empty? b)
-      (Concat acc a)
-      (if (cmp (first a) (first b))
-        (merge-lists (rest a) b cmp (Concat acc [(first a)]))
-        (merge-lists a (rest b) cmp (Concat acc [(first b)]))))))
+  (cond
+    (empty? a) (Concat acc b)
+    (empty? b) (Concat acc a)
+    (cmp (first a) (first b)) (merge-lists (rest a) b cmp (Concat acc [(first a)]))
+    :else (merge-lists a (rest b) cmp (Concat acc [(first b)]))))
 
 ; 内部：归并排序主递归
 (fn merge-sort [xs cmp]

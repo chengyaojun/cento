@@ -1,6 +1,6 @@
-from src.lexer import TokenType, Token
 from src.ast_nodes import *
 from src.errors import CentoError
+from src.lexer import Token, TokenType
 
 
 class Parser:
@@ -88,6 +88,8 @@ class Parser:
                 result = self._parse_fn()
             elif token.value == "if":
                 result = self._parse_if()
+            elif token.value == "cond":
+                result = self._parse_cond()
             elif token.value == "import":
                 result = self._parse_import()
             elif token.value == "try":
@@ -132,22 +134,30 @@ class Parser:
         while self._peek().type != TokenType.RBRACKET:
             tok = self._advance()
             if tok.type != TokenType.SYMBOL:
-                raise CentoError(f"Expected parameter name, got {tok.type.name} at line {tok.line}")
+                raise CentoError(
+                    f"Expected parameter name, got {tok.type.name} at line {tok.line}"
+                )
             if tok.value == "&":
                 if rest_param is not None:
                     raise CentoError(f"Multiple & in parameter list at line {tok.line}")
                 if self._peek().type != TokenType.SYMBOL or self._peek().value == "&":
-                    raise CentoError(f"Expected parameter name after & at line {tok.line}")
+                    raise CentoError(
+                        f"Expected parameter name after & at line {tok.line}"
+                    )
                 rest_param = self._advance().value
             else:
                 if rest_param is not None:
-                    raise CentoError(f"Parameter after rest parameter at line {tok.line}")
+                    raise CentoError(
+                        f"Parameter after rest parameter at line {tok.line}"
+                    )
                 fixed_params.append(tok.value)
         self._expect(TokenType.RBRACKET)
         body = []
         while self._peek().type != TokenType.RPAREN:
             body.append(self._parse_expr())
-        return FnExpr(name=name, fixed_params=fixed_params, rest_param=rest_param, body=body)
+        return FnExpr(
+            name=name, fixed_params=fixed_params, rest_param=rest_param, body=body
+        )
 
     def _parse_if(self):
         self._advance()  # skip 'if'
@@ -156,7 +166,20 @@ class Parser:
         else_branch = None
         if self._peek().type != TokenType.RPAREN:
             else_branch = self._parse_expr()
-        return IfExpr(condition=condition, then_branch=then_branch, else_branch=else_branch)
+        return IfExpr(
+            condition=condition, then_branch=then_branch, else_branch=else_branch
+        )
+
+    def _parse_cond(self):
+        self._advance()  # skip 'cond'
+        clauses = []
+        while self._peek().type != TokenType.RPAREN:
+            test_expr = self._parse_expr()
+            if self._peek().type == TokenType.RPAREN:
+                raise CentoError("cond requires test/expr pairs, got dangling test")
+            result_expr = self._parse_expr()
+            clauses.append((test_expr, result_expr))
+        return CondExpr(clauses=clauses)
 
     def _parse_import(self):
         self._advance()  # skip 'import'
@@ -167,7 +190,10 @@ class Parser:
             while self._peek().type != TokenType.RBRACKET:
                 name = self._expect(TokenType.SYMBOL).value
                 alias = None
-                if self._peek().type == TokenType.KEYWORD and self._peek().value == "as":
+                if (
+                    self._peek().type == TokenType.KEYWORD
+                    and self._peek().value == "as"
+                ):
                     self._advance()  # skip :as
                     alias = self._expect(TokenType.SYMBOL).value
                 symbols.append((name, alias))
@@ -183,16 +209,30 @@ class Parser:
         # Parse body expressions until catch or finally
         while True:
             if self._peek().type == TokenType.LPAREN:
-                next_tok = self.tokens[self.pos + 1] if self.pos + 1 < len(self.tokens) else None
-                if next_tok and next_tok.type == TokenType.SYMBOL and next_tok.value in ("catch", "finally"):
+                next_tok = (
+                    self.tokens[self.pos + 1]
+                    if self.pos + 1 < len(self.tokens)
+                    else None
+                )
+                if (
+                    next_tok
+                    and next_tok.type == TokenType.SYMBOL
+                    and next_tok.value in ("catch", "finally")
+                ):
                     break
             if self._peek().type == TokenType.RPAREN:
                 break
             body.append(self._parse_expr())
         # Parse catch
         if self._peek().type == TokenType.LPAREN:
-            next_tok = self.tokens[self.pos + 1] if self.pos + 1 < len(self.tokens) else None
-            if next_tok and next_tok.type == TokenType.SYMBOL and next_tok.value == "catch":
+            next_tok = (
+                self.tokens[self.pos + 1] if self.pos + 1 < len(self.tokens) else None
+            )
+            if (
+                next_tok
+                and next_tok.type == TokenType.SYMBOL
+                and next_tok.value == "catch"
+            ):
                 self._advance()  # skip (
                 self._advance()  # skip catch
                 self._expect(TokenType.LBRACKET)
@@ -204,15 +244,26 @@ class Parser:
                 self._expect(TokenType.RPAREN)
         # Parse finally
         if self._peek().type == TokenType.LPAREN:
-            next_tok = self.tokens[self.pos + 1] if self.pos + 1 < len(self.tokens) else None
-            if next_tok and next_tok.type == TokenType.SYMBOL and next_tok.value == "finally":
+            next_tok = (
+                self.tokens[self.pos + 1] if self.pos + 1 < len(self.tokens) else None
+            )
+            if (
+                next_tok
+                and next_tok.type == TokenType.SYMBOL
+                and next_tok.value == "finally"
+            ):
                 self._advance()  # skip (
                 self._advance()  # skip finally
                 finally_body = []
                 while self._peek().type != TokenType.RPAREN:
                     finally_body.append(self._parse_expr())
                 self._expect(TokenType.RPAREN)
-        return TryExpr(body=body, catch_param=catch_param, catch_body=catch_body, finally_body=finally_body)
+        return TryExpr(
+            body=body,
+            catch_param=catch_param,
+            catch_body=catch_body,
+            finally_body=finally_body,
+        )
 
     def _peek(self) -> Token:
         return self.tokens[self.pos]
@@ -228,5 +279,7 @@ class Parser:
     def _expect(self, token_type: TokenType) -> Token:
         token = self._advance()
         if token.type != token_type:
-            raise CentoError(f"Expected {token_type.name}, got {token.type.name} ('{token.value}') at line {token.line}")
+            raise CentoError(
+                f"Expected {token_type.name}, got {token.type.name} ('{token.value}') at line {token.line}"
+            )
         return token

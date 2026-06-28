@@ -252,3 +252,65 @@ def test_apply_with_fn():
 
 def test_apply_with_no_args():
     assert eval_str("(apply (fn [] 42) [])") == 42.0
+
+
+class TestCond:
+    def test_cond_first_match(self):
+        assert eval_str("(cond true 1 false 2)") == 1.0
+
+    def test_cond_second_match(self):
+        assert eval_str("(cond false 1 true 2)") == 2.0
+
+    def test_cond_else_clause(self):
+        assert eval_str("(cond false 1 false 2 :else 3)") == 3.0
+
+    def test_cond_no_match_returns_nil(self):
+        assert eval_str("(cond false 1 false 2)") is None
+
+    def test_cond_short_circuit(self):
+        # 未匹配分支不求值
+        result = eval_str(
+            """
+            (cond
+              true 1
+              false (error "should not eval"))
+        """
+        )
+        assert result == 1.0
+
+    def test_cond_with_expressions(self):
+        result = eval_str(
+            """
+            (let [x 5]
+              (cond
+                (< x 0) "neg"
+                (< x 10) "small"
+                :else "large"))
+        """
+        )
+        assert result == "small"
+
+    def test_cond_evaluates_test(self):
+        # test 表达式被求值
+        from src.types import Keyword
+
+        assert eval_str("(cond (= 1 1) :yes :else :no)") == Keyword("yes")
+
+    def test_cond_keyword_truthy(self):
+        # :else 作为 keyword 总是 truthy
+        from src.types import Keyword
+
+        assert eval_str("(cond :else :ok)") == Keyword("ok")
+
+    def test_cond_single_clause(self):
+        from src.types import Keyword
+
+        assert eval_str("(cond true :only)") == Keyword("only")
+
+    def test_cond_empty_returns_nil(self):
+        assert eval_str("(cond)") is None
+
+    def test_cond_odd_args_error(self):
+        # test/expr 必须成对
+        with pytest.raises(Exception):
+            eval_str("(cond true 1 false)")

@@ -52,8 +52,7 @@ class Evaluator:
         self.global_env.define("get", _get_fn)
         self.global_env.define("eq?", lambda a, b: a == b)
         # Apply (dynamic arity call)
-        self.global_env.define("apply",
-            lambda fn, args: self._apply(fn, list(args)))
+        self.global_env.define("apply", lambda fn, args: self._apply(fn, list(args)))
         # Error
         self.global_env.define("error", _error_fn)
         if not skip_std:
@@ -249,6 +248,12 @@ class Evaluator:
             return self._eval(node.then_branch, env)
         elif node.else_branch is not None:
             return self._eval(node.else_branch, env)
+        return None
+
+    def _eval_CondExpr(self, node, env):
+        for test_expr, result_expr in node.clauses:
+            if _is_truthy(self._eval(test_expr, env)):
+                return self._eval(result_expr, env)
         return None
 
     def _eval_ImportExpr(self, node, env):
