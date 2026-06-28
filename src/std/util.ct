@@ -20,3 +20,13 @@
 
 (fn Const [x]
   (fn [& rest] x))
+
+; Comp - 函数组合 (Comp f g h) => x -> f(g(h(x)))
+; 依赖 Reverse（来自 seq.ct，_load_cent_module 共享 env 时可用）
+(fn Comp-helper [fns x]
+  (if (empty? fns)
+    x
+    (Comp-helper (rest fns) ((first fns) x))))
+
+(fn Comp [& fns]
+  (fn [x] (Comp-helper (Reverse fns) x)))

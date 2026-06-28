@@ -61,10 +61,10 @@ class TestFallbackOnCtError:
 
 class TestMixedImplementation:
     def test_util_has_both_ct_and_python(self):
-        """util 模块同时有 Cento（Inc）和 Python（Comp）函数，验证协同工作"""
+        """util 模块：Inc 和 Comp 均来自 util.ct，Apply 来自 evaluator"""
         # Inc 来自 util.ct
         assert eval_str("(Inc 0)") == 1.0
-        # Comp 来自 util.py（Python 原生，因可变参数未自举）
+        # Comp 来自 util.ct（已自举）
         result = eval_str(
             """
             (let [f (Comp Inc Inc)]
@@ -74,10 +74,10 @@ class TestMixedImplementation:
         assert result == 7.0
 
     def test_seq_has_both_ct_and_python(self):
-        """seq 模块同时有 Cento（Take）和 Python（Sort）函数，验证协同工作"""
+        """seq 模块：Take 和 Sort 均来自 seq.ct，验证协同工作"""
         # Take 来自 seq.ct
         assert list(eval_str("(Take 2 [3 1 2])")) == [3.0, 1.0]
-        # Sort 来自 seq.py（Python 原生，因依赖 Timsort）
+        # Sort 来自 seq.ct（已自举，归并排序）
         assert list(eval_str("(Sort [3 1 2])")) == [1.0, 2.0, 3.0]
         # 组合：先排序再取前 2 个
         assert list(eval_str("(Take 2 (Sort [3 1 2]))")) == [1.0, 2.0]
@@ -179,20 +179,41 @@ class TestStringBootstrap:
 
         e = Evaluator()
         for name in [
-            "Has-prefix", "Has-suffix", "Substr", "Index-of",
-            "Includes", "Reverse-str", "Repeat", "Join", "Split",
-            "Split-lines", "Trim", "Upper", "Lower", "Replace", "Len",
+            "Has-prefix",
+            "Has-suffix",
+            "Substr",
+            "Index-of",
+            "Includes",
+            "Reverse-str",
+            "Repeat",
+            "Join",
+            "Split",
+            "Split-lines",
+            "Trim",
+            "Upper",
+            "Lower",
+            "Replace",
+            "Len",
         ]:
-            assert isinstance(e.global_env.lookup(name), Fn), \
-                f"{name} 应来自 string.ct（Fn 类型），实际为 {type(e.global_env.lookup(name))}"
+            assert isinstance(
+                e.global_env.lookup(name), Fn
+            ), f"{name} 应来自 string.ct（Fn 类型），实际为 {type(e.global_env.lookup(name))}"
 
     def test_string_primitives_from_python(self):
         """验证 string 原语来自 evaluator（Python callable，非 Fn）"""
         from src.types import Fn
 
         e = Evaluator()
-        for name in ["char-at", "substring", "from-code", "to-code",
-                     "digit?", "alpha?", "space?", "parse-number"]:
+        for name in [
+            "char-at",
+            "substring",
+            "from-code",
+            "to-code",
+            "digit?",
+            "alpha?",
+            "space?",
+            "parse-number",
+        ]:
             val = e.global_env.lookup(name)
             assert not isinstance(val, Fn), f"{name} 应为 Python callable"
             assert callable(val), f"{name} 应为 callable"

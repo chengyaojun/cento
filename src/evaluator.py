@@ -53,6 +53,7 @@ class Evaluator:
         self.global_env.define("eq?", lambda a, b: a == b)
         # Apply (dynamic arity call)
         self.global_env.define("apply", lambda fn, args: self._apply(fn, list(args)))
+        self.global_env.define("Apply", lambda fn, args: self._apply(fn, list(args)))
         # Error
         self.global_env.define("error", _error_fn)
         # String 原语（与 from-code 对称，供 string.ct 依赖）
@@ -79,6 +80,7 @@ class Evaluator:
                 raise CentoError(f"Cannot parse number: {s}")
 
         self.global_env.define("parse-number", _parse_number)
+        self.global_env.define("Parse-number", _parse_number)
         if not skip_std:
             # std/mutable
             from src.std.mutable import FUNCTIONS as MUTABLE_FUNCTIONS
@@ -130,27 +132,10 @@ class Evaluator:
 
                 for name, fn in SEQ_FUNCTIONS.items():
                     self.global_env.define(name, fn, exported=True)
-            # std/util (Cento 优先，Python fallback)
-            try:
-                util_exports = self._load_cent_module("util")
-                for name, fn in util_exports.items():
-                    self.global_env.define(name, fn, exported=True)
-                from src.std.util import FUNCTIONS as UTIL_FUNCTIONS
-
-                for name, fn in UTIL_FUNCTIONS.items():
-                    if name not in util_exports:
-                        self.global_env.define(name, fn, exported=True)
-            except Exception as e:
-                import sys
-
-                print(
-                    f"[bootstrap] util.ct 加载失败，使用 Python fallback: {e}",
-                    file=sys.stderr,
-                )
-                from src.std.util import FUNCTIONS as UTIL_FUNCTIONS
-
-                for name, fn in UTIL_FUNCTIONS.items():
-                    self.global_env.define(name, fn, exported=True)
+            # std/util（Cento 自举）
+            util_exports = self._load_cent_module("util")
+            for name, fn in util_exports.items():
+                self.global_env.define(name, fn, exported=True)
 
     def _load_cent_module(self, module_name):
         """加载 Cento 源文件实现的标准库模块。
