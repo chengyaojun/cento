@@ -55,6 +55,9 @@ class Evaluator:
         self.global_env.define("apply", lambda fn, args: self._apply(fn, list(args)))
         # Error
         self.global_env.define("error", _error_fn)
+        # String 原语（与 from-code 对称，供 string.ct 依赖）
+        self.global_env.define("from-code", lambda n: chr(int(n)))
+        self.global_env.define("to-code", lambda ch: float(ord(ch[0])))
         if not skip_std:
             # std/mutable
             from src.std.mutable import FUNCTIONS as MUTABLE_FUNCTIONS

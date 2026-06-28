@@ -314,3 +314,20 @@ class TestCond:
         # test/expr 必须成对
         with pytest.raises(Exception):
             eval_str("(cond true 1 false)")
+
+
+class TestToCode:
+    def test_to_code_uppercase(self):
+        assert eval_str('(to-code "A")') == 65.0
+
+    def test_to_code_lowercase(self):
+        assert eval_str('(to-code "a")') == 97.0
+
+    def test_to_code_digit(self):
+        assert eval_str('(to-code "0")') == 48.0
+
+    def test_from_to_code_roundtrip(self):
+        assert eval_str('(from-code (to-code "x"))') == "x"
+
+    def test_to_from_code_roundtrip(self):
+        assert eval_str("(to-code (from-code 97))") == 97.0
