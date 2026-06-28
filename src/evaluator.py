@@ -87,10 +87,42 @@ class Evaluator:
 
             for name, fn in MUTABLE_FUNCTIONS.items():
                 self.global_env.define(name, fn, exported=True)
-            # std/collection
-            from src.std.collection import FUNCTIONS as COLLECTION_FUNCTIONS
 
-            for name, fn in COLLECTION_FUNCTIONS.items():
+            # std/collection 宿主函数（无法自举：需 CentoMap 构造）
+            def _concat(*lists):
+                result = []
+                for lst in lists:
+                    result.extend(lst)
+                return CentoList(result)
+
+            self.global_env.define("Concat", _concat)
+
+            def _assoc(m, key, val):
+                new_m = CentoMap(dict(m))
+                new_m[key] = val
+                return new_m
+
+            self.global_env.define("Assoc", _assoc)
+
+            def _dissoc(m, key):
+                new_m = CentoMap(dict(m))
+                new_m.pop(key, None)
+                return new_m
+
+            self.global_env.define("Dissoc", _dissoc)
+            self.global_env.define("Keys", lambda m: CentoList(list(m.keys())))
+            self.global_env.define("Values", lambda m: CentoList(list(m.values())))
+
+            def _merge(*maps):
+                result = {}
+                for m in maps:
+                    result.update(m)
+                return CentoMap(result)
+
+            self.global_env.define("Merge", _merge)
+            # collection.ct 自举（Map/Filter/Reduce/Each/Contains）
+            collection_exports = self._load_cent_module("collection")
+            for name, fn in collection_exports.items():
                 self.global_env.define(name, fn, exported=True)
             # std/string（Cento 自举，原语已注册）
             string_exports = self._load_cent_module("string")
