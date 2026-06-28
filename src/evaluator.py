@@ -227,27 +227,10 @@ class Evaluator:
             self.global_env.define("Round", lambda x: float(round(x)), exported=True)
             self.global_env.define("Pi", _math.pi, exported=True)
             self.global_env.define("E", _math.e, exported=True)
-            # std/seq (Cento 优先，Python fallback)
-            try:
-                seq_exports = self._load_cent_module("seq")
-                for name, fn in seq_exports.items():
-                    self.global_env.define(name, fn, exported=True)
-                from src.std.seq import FUNCTIONS as SEQ_FUNCTIONS
-
-                for name, fn in SEQ_FUNCTIONS.items():
-                    if name not in seq_exports:
-                        self.global_env.define(name, fn, exported=True)
-            except Exception as e:
-                import sys
-
-                print(
-                    f"[bootstrap] seq.ct 加载失败，使用 Python fallback: {e}",
-                    file=sys.stderr,
-                )
-                from src.std.seq import FUNCTIONS as SEQ_FUNCTIONS
-
-                for name, fn in SEQ_FUNCTIONS.items():
-                    self.global_env.define(name, fn, exported=True)
+            # std/seq（Cento 自举）
+            seq_exports = self._load_cent_module("seq")
+            for name, fn in seq_exports.items():
+                self.global_env.define(name, fn, exported=True)
             # std/util（Cento 自举）
             util_exports = self._load_cent_module("util")
             for name, fn in util_exports.items():
