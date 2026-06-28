@@ -134,7 +134,8 @@ class Evaluator:
 
     def _load_cent_module(self, module_name):
         """加载 Cento 源文件实现的标准库模块。
-        返回 {name: callable} 字典。失败时抛异常由调用方 fallback。
+        返回 {name: callable} 字典。失败时抛异常由调用方处理。
+        子 evaluator 共享当前 global_env 的所有绑定（脱离 .py 依赖）。
         """
         import os
 
@@ -151,19 +152,11 @@ class Evaluator:
         tokens = Lexer(source).tokenize()
         ast = Parser(tokens).parse()
 
-        # 使用独立 evaluator 避免污染当前 global_env
-        # skip_std=True 避免递归加载 std 模块，手动注册 collection/math 依赖
+        # 子 evaluator 共享当前 env 的所有原语（不再从 .py 导入）
         sub_evaluator = Evaluator(skip_std=True)
-        from src.std.collection import FUNCTIONS as COLLECTION_FUNCTIONS
+        for name, val in self.global_env.bindings.items():
+            sub_evaluator.global_env.define(name, val)
 
-        for name, fn in COLLECTION_FUNCTIONS.items():
-            sub_evaluator.global_env.define(name, fn, exported=True)
-        # 注册 math 模块（Floor 等基础数学函数，供 .ct 中排序等算法使用）
-        from src.std.math import FUNCTIONS as MATH_FUNCTIONS
-
-        for name, fn in MATH_FUNCTIONS.items():
-            sub_evaluator.global_env.define(name, fn, exported=True)
-        # 记录 .ct 加载前的绑定，后续只收集新增的
         prior_bindings = set(sub_evaluator.global_env.bindings.keys())
         for expr in ast.expressions:
             sub_evaluator.evaluate(expr)
