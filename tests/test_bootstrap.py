@@ -168,3 +168,35 @@ class TestSeqExtendedBootstrap:
             assert False, "merge-lists should not be exported"
         except Exception:
             pass
+
+
+class TestStringBootstrap:
+    """string.ct 自举来源验证"""
+
+    def test_string_ct_functions_from_ct(self):
+        """验证 string 纯逻辑函数来自 .ct（Fn 类型）"""
+        from src.types import Fn
+
+        e = Evaluator()
+        for name in [
+            "Has-prefix", "Has-suffix", "Substr", "Index-of",
+            "Includes", "Reverse-str", "Repeat", "Join", "Split",
+            "Split-lines", "Trim", "Upper", "Lower", "Replace", "Len",
+        ]:
+            assert isinstance(e.global_env.lookup(name), Fn), \
+                f"{name} 应来自 string.ct（Fn 类型），实际为 {type(e.global_env.lookup(name))}"
+
+    def test_string_primitives_from_python(self):
+        """验证 string 原语来自 evaluator（Python callable，非 Fn）"""
+        from src.types import Fn
+
+        e = Evaluator()
+        for name in ["char-at", "substring", "from-code", "to-code",
+                     "digit?", "alpha?", "space?", "parse-number"]:
+            val = e.global_env.lookup(name)
+            assert not isinstance(val, Fn), f"{name} 应为 Python callable"
+            assert callable(val), f"{name} 应为 callable"
+
+    def test_to_code_available(self):
+        """验证 to-code 原语已注册"""
+        assert eval_str('(to-code "A")') == 65.0

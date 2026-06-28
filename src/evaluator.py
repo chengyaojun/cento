@@ -58,6 +58,27 @@ class Evaluator:
         # String 原语（与 from-code 对称，供 string.ct 依赖）
         self.global_env.define("from-code", lambda n: chr(int(n)))
         self.global_env.define("to-code", lambda ch: float(ord(ch[0])))
+        self.global_env.define("char-at", lambda s, i: s[int(i)])
+
+        def _substring(s, start, end=None):
+            return s[int(start) :] if end is None else s[int(start) : int(end)]
+
+        self.global_env.define("substring", _substring)
+        self.global_env.define("digit?", lambda ch: len(ch) == 1 and ch in "0123456789")
+        self.global_env.define(
+            "alpha?", lambda ch: len(ch) == 1 and ch.isalpha() and ch.isascii()
+        )
+        self.global_env.define(
+            "space?", lambda ch: len(ch) == 1 and ch.isspace() and ch.isascii()
+        )
+
+        def _parse_number(s):
+            try:
+                return float(s)
+            except (ValueError, TypeError):
+                raise CentoError(f"Cannot parse number: {s}")
+
+        self.global_env.define("parse-number", _parse_number)
         if not skip_std:
             # std/mutable
             from src.std.mutable import FUNCTIONS as MUTABLE_FUNCTIONS
@@ -69,10 +90,9 @@ class Evaluator:
 
             for name, fn in COLLECTION_FUNCTIONS.items():
                 self.global_env.define(name, fn, exported=True)
-            # std/string
-            from src.std.string import FUNCTIONS as STRING_FUNCTIONS
-
-            for name, fn in STRING_FUNCTIONS.items():
+            # std/string（Cento 自举，原语已注册）
+            string_exports = self._load_cent_module("string")
+            for name, fn in string_exports.items():
                 self.global_env.define(name, fn, exported=True)
             # std/io
             from src.std.io import FUNCTIONS as IO_FUNCTIONS

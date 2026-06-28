@@ -1,0 +1,160 @@
+; string.ct - 字符串操作自举实现（15 个函数）
+; 依赖原语：char-at, substring, from-code, to-code, digit?, alpha?, space?,
+;           parse-number, count, str, Reduce, empty?, first, rest, float
+;           +, -, =, !=, <, >, <=, >=, and, or
+
+; 1. Len - 复用 count 原语
+(fn Len [s] (count s))
+
+; 2. Has-prefix - 逐字符比较前缀
+(fn Has-prefix-helper [s prefix i]
+  (if (>= i (count prefix))
+    true
+    (if (!= (char-at s i) (char-at prefix i))
+      false
+      (Has-prefix-helper s prefix (+ i 1)))))
+
+(fn Has-prefix [s prefix]
+  (if (> (count prefix) (count s))
+    false
+    (Has-prefix-helper s prefix 0)))
+
+; 3. Has-suffix - 基于 substring + Has-prefix
+(fn Has-suffix [s suffix]
+  (let [s-len (count s)
+        suf-len (count suffix)
+        offset (- s-len suf-len)]
+    (if (< offset 0)
+      false
+      (Has-prefix (substring s offset) suffix))))
+
+; 4. Substr - 复用 substring 原语
+(fn Substr [s start end] (substring s start end))
+
+; 5. Index-of - 子串搜索
+(fn Index-of-helper [s sub i n sub-len]
+  (if (> (+ i sub-len) n)
+    (- 0 1.0)
+    (if (Has-prefix (substring s i) sub)
+      i
+      (Index-of-helper s sub (+ i 1) n sub-len))))
+
+(fn Index-of [s sub]
+  (Index-of-helper s sub 0 (count s) (count sub)))
+
+; 6. Includes - 基于 Index-of
+(fn Includes [s sub] (!= (Index-of s sub) (- 0 1.0)))
+
+; 7. Reverse-str - 累加器式逆序
+(fn Reverse-str-helper [s i acc]
+  (if (< i 0)
+    acc
+    (Reverse-str-helper s (- i 1) (str acc (char-at s i)))))
+
+(fn Reverse-str [s]
+  (Reverse-str-helper s (- (count s) 1) ""))
+
+; 8. Repeat - 累加器式重复
+(fn Repeat-helper [s n acc]
+  (if (<= n 0)
+    acc
+    (Repeat-helper s (- n 1) (str acc s))))
+
+(fn Repeat [s n] (Repeat-helper s n ""))
+
+; 9. Join - 用 Reduce 拼接
+(fn Join [lst sep]
+  (Reduce (fn [acc x]
+            (if (= acc "")
+              (str x)
+              (str acc sep x)))
+          "" lst))
+
+; 10. Split - 逐字符检测分隔符
+(fn Split-helper [s sep i start acc]
+  (let [n (count s)
+        sep-len (count sep)]
+    (if (> (+ i sep-len) n)
+      (Concat acc [(substring s start)])
+      (if (Has-prefix (substring s i) sep)
+        (Split-helper s sep (+ i sep-len) (+ i sep-len)
+                      (Concat acc [(substring s start i)]))
+        (Split-helper s sep (+ i 1) start acc)))))
+
+(fn Split [s sep]
+  (if (= sep "")
+    [s]
+    (Split-helper s sep 0 0 [])))
+
+; 11. Split-lines - 检测换行符（ASCII 10）
+(fn Split-lines-helper [s newline i start acc]
+  (if (>= i (count s))
+    (Concat acc [(substring s start)])
+    (if (= (char-at s i) newline)
+      (Split-lines-helper s newline (+ i 1) (+ i 1)
+                          (Concat acc [(substring s start i)]))
+      (Split-lines-helper s newline (+ i 1) start acc))))
+
+(fn Split-lines [s] (Split-lines-helper s (from-code 10) 0 0 []))
+
+; 12. Trim - 裁剪前导后缀空白
+(fn Trim-left [s i]
+  (if (>= i (count s))
+    s
+    (if (space? (char-at s i))
+      (Trim-left s (+ i 1))
+      (substring s i))))
+
+(fn Trim-right [s i]
+  (if (< i 0)
+    s
+    (if (space? (char-at s i))
+      (Trim-right s (- i 1))
+      (substring s 0 (+ i 1)))))
+
+(fn Trim [s]
+  (let [left-trimmed (Trim-left s 0)]
+    (Trim-right left-trimmed (- (count left-trimmed) 1))))
+
+; 13. Upper - ASCII 大写转换（a-z → A-Z）
+(fn Upper-char [ch]
+  (if (and (>= ch "a") (<= ch "z"))
+    (from-code (- (to-code ch) 32))
+    ch))
+
+(fn Upper-helper [s i n acc]
+  (if (>= i n)
+    acc
+    (Upper-helper s (+ i 1) n (str acc (Upper-char (char-at s i))))))
+
+(fn Upper [s]
+  (Upper-helper s 0 (count s) ""))
+
+; 14. Lower - ASCII 小写转换（A-Z → a-z）
+(fn Lower-char [ch]
+  (if (and (>= ch "A") (<= ch "Z"))
+    (from-code (+ (to-code ch) 32))
+    ch))
+
+(fn Lower-helper [s i n acc]
+  (if (>= i n)
+    acc
+    (Lower-helper s (+ i 1) n (str acc (Lower-char (char-at s i))))))
+
+(fn Lower [s]
+  (Lower-helper s 0 (count s) ""))
+
+; 15. Replace - 子串搜索 + 替换
+(fn Replace-helper [s old new start acc]
+  (let [remaining (substring s start)
+        idx (Index-of remaining old)]
+    (if (= idx (- 0 1.0))
+      (str acc remaining)
+      (let [abs-idx (+ start idx)
+            new-acc (str acc (substring s start abs-idx) new)]
+        (Replace-helper s old new (+ abs-idx (count old)) new-acc)))))
+
+(fn Replace [s old new]
+  (if (= old "")
+    s
+    (Replace-helper s old new 0 "")))
