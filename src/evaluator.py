@@ -138,11 +138,31 @@ class Evaluator:
 
             for name, fn in FS_FUNCTIONS.items():
                 self.global_env.define(name, fn, exported=True)
-            # std/math
-            from src.std.math import FUNCTIONS as MATH_FUNCTIONS
+            # std/math（宿主：需 Python math 库）
+            import math as _math
 
-            for name, fn in MATH_FUNCTIONS.items():
-                self.global_env.define(name, fn, exported=True)
+            self.global_env.define("Sin", lambda x: _math.sin(x), exported=True)
+            self.global_env.define("Cos", lambda x: _math.cos(x), exported=True)
+            self.global_env.define("Tan", lambda x: _math.tan(x), exported=True)
+            self.global_env.define("Asin", lambda x: _math.asin(x), exported=True)
+            self.global_env.define("Acos", lambda x: _math.acos(x), exported=True)
+            self.global_env.define("Atan", lambda x: _math.atan(x), exported=True)
+            self.global_env.define("Exp", lambda x: _math.exp(x), exported=True)
+            self.global_env.define("Log", lambda x: _math.log(x), exported=True)
+            self.global_env.define("Log10", lambda x: _math.log10(x), exported=True)
+            self.global_env.define("Sqrt", lambda x: _math.sqrt(x), exported=True)
+            self.global_env.define(
+                "Pow", lambda base, exp: _math.pow(base, exp), exported=True
+            )
+            self.global_env.define(
+                "Floor", lambda x: float(_math.floor(x)), exported=True
+            )
+            self.global_env.define(
+                "Ceil", lambda x: float(_math.ceil(x)), exported=True
+            )
+            self.global_env.define("Round", lambda x: float(round(x)), exported=True)
+            self.global_env.define("Pi", _math.pi, exported=True)
+            self.global_env.define("E", _math.e, exported=True)
             # std/seq (Cento 优先，Python fallback)
             try:
                 seq_exports = self._load_cent_module("seq")
